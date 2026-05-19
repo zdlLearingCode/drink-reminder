@@ -7,7 +7,7 @@ import winreg
 from PIL import Image, ImageDraw
 import pystray
 
-INTERVAL_MINUTES = 15
+INTERVAL_MINUTES = 30
 APP_NAME = "DrinkWater"
 
 
@@ -43,7 +43,21 @@ def set_autostart(enable):
     winreg.CloseKey(key)
 
 
+def resource_path(relative_path):
+    if getattr(sys, 'frozen', False):
+        base = sys._MEIPASS
+    else:
+        base = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base, relative_path)
+
+
 def create_tray_icon():
+    icon_path = resource_path("icon.ico")
+    if os.path.exists(icon_path):
+        try:
+            return Image.open(icon_path)
+        except Exception:
+            pass
     img = Image.new('RGBA', (64, 64), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     draw.ellipse([16, 8, 48, 40], fill=(30, 144, 255))
@@ -108,7 +122,7 @@ class DrinkWaterApp:
                                    bg="#f0f8ff", fg="#1e90ff")
         self.label_time.pack(pady=(8, 0))
 
-        self.label_cups = tk.Label(body, text="今日: 0 杯",
+        self.label_cups = tk.Label(body, text="今日: 0 次",
                                    font=("Microsoft YaHei", 9), bg="#f0f8ff", fg="#666")
         self.label_cups.pack()
 
@@ -175,7 +189,7 @@ class DrinkWaterApp:
 
     def show_reminder(self):
         self.total_cups += 1
-        self.label_cups.config(text=f"今日: {self.total_cups} 杯")
+        self.label_cups.config(text=f"今日: {self.total_cups} 次")
         self.window.bell()
         self.window.after(0, self.window.deiconify)
 
@@ -196,6 +210,7 @@ class DrinkWaterApp:
         def close_and_reset():
             reminder.destroy()
             self.remaining = INTERVAL_MINUTES * 60
+            self.hide_to_tray()
             self.tick()
 
         tk.Button(reminder, text="好的，已喝水", command=close_and_reset,
